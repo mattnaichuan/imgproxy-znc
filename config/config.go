@@ -30,6 +30,7 @@ var (
 	KeepAliveTimeout       int
 	ClientKeepAliveTimeout int
 	DownloadTimeout        int
+	RandomDelayMax         float64
 	Workers                int
 	RequestsQueueSize      int
 	MaxClients             int
@@ -239,6 +240,7 @@ func Reset() {
 	KeepAliveTimeout = 10
 	ClientKeepAliveTimeout = 90
 	DownloadTimeout = 5
+ RandomDelayMax = 0
 	Workers = runtime.GOMAXPROCS(0) * 2
 	RequestsQueueSize = 0
 	MaxClients = 2048
@@ -456,6 +458,8 @@ func Configure() error {
 	configurators.Int(&ClientKeepAliveTimeout, "IMGPROXY_CLIENT_KEEP_ALIVE_TIMEOUT")
 
 	configurators.Int(&DownloadTimeout, "IMGPROXY_DOWNLOAD_TIMEOUT")
+
+ configurators.Float64(&RandomDelayMax, "IMGPROXY_RANDOM_DELAY_MAX")
 
 	if lambdaFn := os.Getenv("AWS_LAMBDA_FUNCTION_NAME"); len(lambdaFn) > 0 {
 		Workers = 1
@@ -739,6 +743,10 @@ func Configure() error {
 	if DownloadTimeout <= 0 {
 		return fmt.Errorf("Download timeout should be greater than 0, now - %d\n", DownloadTimeout)
 	}
+
+	if RandomDelayMax < 0 {
+	 return fmt.Errorf("Random delay max should be greater than or equal to 0, now - %f\n", RandomDelayMax)
+ }
 
 	if Workers <= 0 {
 		return fmt.Errorf("Workers number should be greater than 0, now - %d\n", Workers)

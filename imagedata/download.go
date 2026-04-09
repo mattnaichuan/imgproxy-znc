@@ -174,26 +174,23 @@ func SendRequest(req *http.Request) (*http.Response, error) {
 		client = downloadClient
 	}
 
-    // ========== ADD RANDOM DELAY HERE ==========
-    // Check if random delay is enabled via environment variable
+    // ========== ADD RANDOM DELAY USING CONFIG ==========
     if config.RandomDelayMax > 0 {
-        // Generate random delay between 0 and RandomDelayMax seconds
-        // Add minimum delay to avoid hitting rate limits immediately
-        minDelay := 1 // Minimum 1 second
+        // Generate random delay between 1 and RandomDelayMax seconds
+        minDelay := 1.0
         maxDelay := config.RandomDelayMax
         
-        // Random delay in seconds, converted to milliseconds
-        delaySeconds := minDelay + rand.Float64()*(maxDelay-minDelay)
-        delayDuration := time.Duration(delaySeconds * float64(time.Second))
+        // Ensure maxDelay is greater than minDelay
+        if maxDelay <= minDelay {
+            maxDelay = minDelay + 1
+        }
         
-        // Log the delay (optional, helps debugging)
-        // log.Printf("Adding random delay of %.1f seconds before request to %s", delaySeconds, req.URL.Host)
+        delaySeconds := minDelay + rand.Float64()*(maxDelay-minDelay)
         
         select {
-        case <-time.After(delayDuration):
-            // Delay completed, continue with request
+        case <-time.After(time.Duration(delaySeconds * float64(time.Second))):
+            // Continue with request
         case <-req.Context().Done():
-            // Request was cancelled during delay
             return nil, req.Context().Err()
         }
     }

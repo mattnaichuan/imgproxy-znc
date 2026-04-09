@@ -4,6 +4,7 @@ import (
 	"compress/gzip"
 	"context"
 	"io"
+ "math/rand"
 	"net/http"
 	"net/http/cookiejar"
 	"regexp"
@@ -172,6 +173,31 @@ func SendRequest(req *http.Request) (*http.Response, error) {
 	} else {
 		client = downloadClient
 	}
+
+    // ========== ADD RANDOM DELAY HERE ==========
+    // Check if random delay is enabled via environment variable
+    if config.RandomDelayMax > 0 {
+        // Generate random delay between 0 and RandomDelayMax seconds
+        // Add minimum delay to avoid hitting rate limits immediately
+        minDelay := 1 // Minimum 1 second
+        maxDelay := config.RandomDelayMax
+        
+        // Random delay in seconds, converted to milliseconds
+        delaySeconds := minDelay + rand.Float64()*(maxDelay-minDelay)
+        delayDuration := time.Duration(delaySeconds * float64(time.Second))
+        
+        // Log the delay (optional, helps debugging)
+        // log.Printf("Adding random delay of %.1f seconds before request to %s", delaySeconds, req.URL.Host)
+        
+        select {
+        case <-time.After(delayDuration):
+            // Delay completed, continue with request
+        case <-req.Context().Done():
+            // Request was cancelled during delay
+            return nil, req.Context().Err()
+        }
+    }
+    // ========== END RANDOM DELAY ==========
 
 	for {
 		res, err := client.Do(req)
